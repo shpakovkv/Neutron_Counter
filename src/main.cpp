@@ -118,7 +118,7 @@ void loop() {
     Serial.print(";  OVF = ");
     Serial.print(nCounter[1].ovf_info);
     Serial.print(";  width = ");
-    Serial.print((double(nCounter[1].reg_info) + 65536.0 * nCounter[1].ovf_info) * nCounter[1].timePerTick, 3);
+    Serial.print((double(nCounter[1].reg_info) + 256.0 * nCounter[1].ovf_info) * nCounter[1].timePerTick, 3);
     Serial.print(" mks;  Count = ");
     Serial.println(round((double(nCounter[1].reg_info) + 256 * nCounter[1].ovf_info) * nCounter[1].timePerTick / nCounter[1].pulseAverageTime));
     nCounter[1].have_new = false;
