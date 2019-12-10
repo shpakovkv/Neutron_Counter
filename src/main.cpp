@@ -1,6 +1,5 @@
 #include "Arduino.h"
 #include "GyverTM1637.h"
-#include "GyverHacks.h"
 
 #define DISP_CLK 6
 #define DISP_DIO 7
@@ -185,7 +184,6 @@ void displayResult();
 // variables
 bool countingAllowed = false;
 unsigned long lastAllowedTime = 0;
-unsigned long lastCounts = 0;
 unsigned long lastDispUpd = 0;
 bool DEBUG = false;
 
@@ -244,8 +242,8 @@ void loop() {
     for (int i = 0; i < N_COUNTER_NUMBER; i++) { neutronCounter[i].Flush();}
     state_indicator.on();
 
-    neutronCounter[0].needToUpdateTime = true; // DEBUG
-    neutronCounter[0].signalContinues = true;  // DEBUG
+    // neutronCounter[0].needToUpdateTime = true; // DEBUG
+    // neutronCounter[0].signalContinues = true;  // DEBUG
   }
 
   // counting if needed
@@ -264,19 +262,11 @@ void loop() {
         displayResult();  // update display if needed
       }
     }
-
     // stop counting
     else
     {
       countingAllowed = false;
-      cli();
       state_indicator.off();
-      lastCounts = 0;
-      for (int i = 0; i < N_COUNTER_NUMBER; i++)
-      {
-        lastCounts += neutronCounter[i].GetPulseNumber();
-      }
-      sei();
       displayResult();
       lastDispUpd = millis();
 
@@ -289,8 +279,15 @@ void loop() {
       }
     }
   }
+  else
+  {
+    if (millis() - lastDispUpd > DISP_UPD_EVERY) 
+    { 
+      displayResult();
+      lastDispUpd = millis();
+    }
+  }
 
-  if (millis() - lastDispUpd > DISP_UPD_EVERY) { displayResult();}
 }
 
 //==============================================================================
