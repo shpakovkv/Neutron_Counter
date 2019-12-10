@@ -99,30 +99,30 @@ void loop() {
 
   displayResult();
 
-  if (DEBUG && nCounter[0].have_new)
-  {
-    Serial.print("TCNT1 = ");
-    Serial.print(nCounter[0].reg_info);
-    Serial.print(";  OVF = ");
-    Serial.print(nCounter[0].ovf_info);
-    Serial.print(";  width = ");
-    Serial.print((double(nCounter[0].reg_info) + 65536.0 * nCounter[0].ovf_info) * nCounter[0].timePerTick, 3);
-    Serial.print(" mks;  Count = ");
-    Serial.println(round((double(nCounter[0].reg_info) + 65536L * nCounter[0].ovf_info) * nCounter[0].timePerTick / nCounter[0].pulseAverageTime));
-    nCounter[0].have_new = false;
-  }
-  if (DEBUG && nCounter[1].have_new)
-  {
-    Serial.print("TCNT2 = ");
-    Serial.print(nCounter[1].reg_info);
-    Serial.print(";  OVF = ");
-    Serial.print(nCounter[1].ovf_info);
-    Serial.print(";  width = ");
-    Serial.print((double(nCounter[1].reg_info) + 256.0 * nCounter[1].ovf_info) * nCounter[1].timePerTick, 3);
-    Serial.print(" mks;  Count = ");
-    Serial.println(round((double(nCounter[1].reg_info) + 256 * nCounter[1].ovf_info) * nCounter[1].timePerTick / nCounter[1].pulseAverageTime));
-    nCounter[1].have_new = false;
-  }
+  // if (DEBUG && nCounter[0].have_new)
+  // {
+  //   Serial.print("TCNT1 = ");
+  //   Serial.print(nCounter[0].reg_info);
+  //   Serial.print(";  OVF = ");
+  //   Serial.print(nCounter[0].ovf_info);
+  //   Serial.print(";  width = ");
+  //   Serial.print((double(nCounter[0].reg_info) + 65536.0 * nCounter[0].ovf_info) * nCounter[0].timePerTick, 3);
+  //   Serial.print(" mks;  Count = ");
+  //   Serial.println(round((double(nCounter[0].reg_info) + 65536L * nCounter[0].ovf_info) * nCounter[0].timePerTick / nCounter[0].pulseAverageTime));
+  //   nCounter[0].have_new = false;
+  // }
+  // if (DEBUG && nCounter[1].have_new)
+  // {
+  //   Serial.print("TCNT2 = ");
+  //   Serial.print(nCounter[1].reg_info);
+  //   Serial.print(";  OVF = ");
+  //   Serial.print(nCounter[1].ovf_info);
+  //   Serial.print(";  width = ");
+  //   Serial.print((double(nCounter[1].reg_info) + 256.0 * nCounter[1].ovf_info) * nCounter[1].timePerTick, 3);
+  //   Serial.print(" mks;  Count = ");
+  //   Serial.println(round((double(nCounter[1].reg_info) + 256 * nCounter[1].ovf_info) * nCounter[1].timePerTick / nCounter[1].pulseAverageTime));
+  //   nCounter[1].have_new = false;
+  // }
   
   
 }

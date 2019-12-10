@@ -4,17 +4,18 @@
 // for Atmega328
 #define INT0_PIN 2   // D2 == Interrupt#0
 #define INT1_PIN 3   // D3 == Interrupt#1
-#define SIGNAL_START_EDGE RISING
-#define SIGNAL_END_EDGE FALLING
-#define TIMER1_MAX_COUNT 65536
-#define TIMER2_MAX_COUNT 256
-#define T1_PRESCALER 2
-#define T2_PRESCALER 2
+#define TIMER1_MAX_COUNT 65536      // 2^16
+#define TIMER2_MAX_COUNT 256        // 2^8
+
+// SETUP
+#define SIGNAL_START_EDGE RISING    // start == rising for positive signals counting
+#define SIGNAL_END_EDGE FALLING     // swap this two values in order to count negative signals
+#define T1_PRESCALER 5      // 5 == b101 for 1024 prescaler
+#define T1_OCR1AH 86        // 86 * (1 / 16MHz / 1024) = 5504 mks
+#define T2_PRESCALER 7      // 7 == b111
+#define T2_OCR2A 86         // 86 * (1 / 16MHz / 1024) = 5504 mks
 
 #include "Arduino.h"
-
-static double T1_mksFromPrescaler[6] = {0, 0.0625, 0.5, 4, 16, 64};
-static double T2_mksFromPrescaler[5] = {0, 0.0625, 0.5, 2, 4};
 
 class NeutronCounter
 {
@@ -33,16 +34,16 @@ class NeutronCounter
     uint8_t pin;    // digital input pin (interrupt pin)
     int intNum;     // interrupt number
     
-    uint32_t timerOVF;          // timer overflow counter
     double timePerTick;         // time in mks per timer tick
     uint32_t pulseAverageTime;  // [mks] time of single pulse max=4294967296 mks (~71.5 minutes)
 
     bool signalContinues;   // means the rising front (start) of the signal have been detected, 
     // and the falling front (end) of the signal is still not detected
 
-    bool have_new = false;
-    uint8_t reg_info = 0;
-    uint32_t ovf_info = 0;
+    // bool have_new = false;
+    // uint8_t reg_info = 0;
+    // uint32_t ovf_info = 0;
+    // uint32_t timerOVF;          // timer overflow counter
 
   private:
     uint16_t pulseCounter;      // registred pulse number max=65535

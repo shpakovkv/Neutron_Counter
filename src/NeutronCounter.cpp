@@ -4,6 +4,12 @@
 
 extern NeutronCounter nCounter[];
 
+// Atmega328 Timer1 mks per tick for all available prescalers
+static double T1_mksFromPrescaler[6] = {0, 0.0625, 0.5, 4, 16, 64};
+
+// Atmega328 Timer2 mks per tick for all available prescalers
+static double T2_mksFromPrescaler[8] = {0, 0.0625, 0.5, 2, 4, 8, 16, 64};
+
 NeutronCounter::NeutronCounter(uint8_t pinNum, uint8_t interruptNum, uint32_t pulseTime)
 {
   pin = pinNum;
@@ -11,7 +17,6 @@ NeutronCounter::NeutronCounter(uint8_t pinNum, uint8_t interruptNum, uint32_t pu
   pinMode(pin, INPUT);
   pulseAverageTime = pulseTime;
   pulseCounter = 0;
-  timerOVF = 0;
   if (interruptNum == 0) {timePerTick = T1_mksFromPrescaler[T1_PRESCALER];}
   else if (interruptNum == 1) {timePerTick = T2_mksFromPrescaler[T2_PRESCALER];}
 }
@@ -25,44 +30,44 @@ void NeutronCounter::init(){
   {
     TCCR1A = 0;  // flush Timer1 settings
     TCCR1B = 0;
-    TIMSK1 = (1 << TOIE1);   // turn on Timer1 overflow interrupt
+    TCCR1B |= (1 << WGM12);   // set Timer1 CTC mode
+    
   }
   else if (intNum == 1)
   {
     TCCR2A = 0;  // flush Timer2 settings
     TCCR2B = 0;
-    TIMSK2 = (1 << TOIE2);   // turn on Timer2 overflow interrupt
+    TCCR2A |= (1 << WGM21);   // set Timer2 CTC mode
   }
   sei();
 }
 
-// Timer1 overflow interrupt handler
-ISR(TIMER1_OVF_vect)
+// Timer1 Compare A interrupt handler
+ISR(TIMER1_COMPA_vect)
 {
-    ++nCounter[0].timerOVF;
+    nCounter[0].increasePulseNumber();
 }
 
-// Timer2 overflow interrupt handler
-ISR(TIMER2_OVF_vect)
+// Timer2 Compare A interrupt handler
+ISR(TIMER2_COMPA_vect)
 {
-    ++nCounter[1].timerOVF;
+    nCounter[1].increasePulseNumber();
 }
 
 // stop interrupt handling
 void NeutronCounter::stopCounting(){
-  if (intNum == 0 && nCounter[0].signalContinues) 
-  {
-    nCounter[0].increasePulseNumber(round((double(TCNT1) + TIMER1_MAX_COUNT * nCounter[0].timerOVF) * nCounter[0].timePerTick / nCounter[0].pulseAverageTime));
-  }
-  else if (intNum == 1 && nCounter[1].signalContinues) 
-  {
-    nCounter[1].increasePulseNumber(round((double(TCNT2) + TIMER2_MAX_COUNT * nCounter[1].timerOVF) * nCounter[1].timePerTick / nCounter[1].pulseAverageTime));
-  }
-  
   detachInterrupt(intNum);  // stop external interrupt
 
-  if (intNum == 0) { TCCR1B = 0; }      // stop Timer1
-  else if (intNum == 1) { TCCR2B = 0;}  // stop Timer2 
+  if (intNum == 0) 
+  { 
+    TCCR1B &= ~((1 << CS10) | (1 << CS11) | (1 << CS12)); // stop Timer1
+    TIMSK1 &= ~(1 << OCIE1A);                             // turn off Timer1 Compare A Match Interrupt
+  }      
+  else if (intNum == 1) 
+  { 
+    TCCR2B &= ~((1 << CS20) | (1 << CS21) | (1 << CS22));  // stop Timer2 
+    TIMSK2 = 0;
+  }  
 }
 
 // start interrupt handling
@@ -91,9 +96,21 @@ void NeutronCounter::increasePulseNumber(uint16_t n)
 
 void NeutronCounter::flush()
 {
-  timerOVF = 0;
+  // timerOVF = 0; // delete
   pulseCounter = 0;
   signalContinues = false;
+
+  // if (intNum == 0)
+  // {
+  //   TCNT1 = 0;                            // clear Timer1 counter
+  //   TIFR1 |= (1 << OCF1A) | (1 << TOV1);  // clear Timer1 interrupt flags
+  // }
+  // else if (intNum == 1)
+  // {
+  //   TCNT2 = 0;                            // clear Timer2 counter
+  //   TIFR2 |= (1 << OCF2A) | (1 << TOV2);  // clear Timer2 interrupt flags
+  // }
+  
 }
 
 uint16_t NeutronCounter::GetPulseNumber()
@@ -106,20 +123,19 @@ void nSignalHandler0()
 {
   if (nCounter[0].signalContinues)
   {
-    // falling front detected (end of the signal)
-    // calc signal lenght and divide by pulseAverageTime
-    nCounter[0].reg_info = TCNT1;
-    nCounter[0].ovf_info = nCounter[0].timerOVF;
-    nCounter[0].have_new = true;
-    nCounter[0].increasePulseNumber(round((double(nCounter[0].reg_info) + TIMER1_MAX_COUNT * nCounter[0].ovf_info) * nCounter[0].timePerTick / nCounter[0].pulseAverageTime));
-    nCounter[0].signalContinues = false;
-    reAttachInterrupt(nCounter[0].intNum, SIGNAL_START_EDGE);  // serch for rising front (new signal)
+    // signal's tail detected (end of the signal)
+    TIMSK1 &= ~(1 << OCIE1A);                                 // turn off Timer1 Compare A Match Interrupt
+    TCCR1B &= ~((1 << CS10) | (1 << CS11) | (1 << CS12));     // turn off Timer1
+    nCounter[0].signalContinues = false;  
+    reAttachInterrupt(nCounter[0].intNum, SIGNAL_START_EDGE); // serch for rising front (new signal)
   }
   else 
   {
-    // rising front detected (signal start)
-    TCNT1 = 0;                  // clear Timer1 counter
-    nCounter[0].timerOVF = 0;   // clear Timer1 overflow counter
+    // signal's head detected (signal start)
+    TCNT1 = 0;                            // clear Timer1 counter
+    TIFR1 |= (1 << OCF1A) | (1 << TOV1);  // clear timer interrupt flags
+    TIMSK1 = (1 << OCIE1A);               // turn on Timer1 Compare A Match Interrupt
+    TCCR1B |= (T1_PRESCALER << CS10);     // set Timer1 prescaler and start Timer1
     nCounter[0].signalContinues = true;  
     reAttachInterrupt(nCounter[0].intNum, SIGNAL_END_EDGE);   // serch for falling front (end of the signal)
   }
@@ -131,20 +147,18 @@ void nSignalHandler1()
   if (nCounter[1].signalContinues)
   {
     // falling front detected (end of the signal)
-    // calc signal lenght and divide by pulseAverageTime
-    nCounter[1].reg_info = TCNT2;
-    nCounter[1].ovf_info = nCounter[1].timerOVF;
-    nCounter[1].have_new = true;
-    nCounter[1].increasePulseNumber(round((double(nCounter[1].reg_info) + TIMER2_MAX_COUNT * nCounter[1].ovf_info) * nCounter[1].timePerTick / nCounter[1].pulseAverageTime));
-    
+    TIMSK2 &= ~(1 << OCIE2A);                                   // turn off Timer2 Compare A Match Interrupt
+    TCCR2B &= ~((1 << CS20) | (1 << CS21) | (1 << CS22));       // stop Timer2 
     nCounter[1].signalContinues = false;
     reAttachInterrupt(nCounter[1].intNum, SIGNAL_START_EDGE);   // serch for rising front (new signal)
   }
   else 
   { 
     // rising front detected (signal start)
-    TCNT2 = 0;                  // clear Timer2 counter
-    nCounter[1].timerOVF = 0;   // clear Timer2 overflow counter
+    TCNT2 = 0;                            // clear Timer2 counter
+    TIFR2 |= (1 << OCF2A) | (1 << TOV2);  // clear timer interrupt flags
+    TIMSK2 = (1 << OCIE2A);               // turn on Timer1 Compare A Match Interrupt
+    TCCR2B |= (T2_PRESCALER << CS20);     // set Timer2 prescaler 8x (b010) and start Timer2 
     nCounter[1].signalContinues = true;
     reAttachInterrupt(nCounter[1].intNum, SIGNAL_END_EDGE);   // serch for falling front (end of the signal)
   }
