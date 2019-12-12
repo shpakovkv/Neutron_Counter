@@ -94,6 +94,7 @@ void loop() {
       // displayResult();
       // disp.setFastMode();
       // sei();
+      printNeutronStats();
     }
   }
 
