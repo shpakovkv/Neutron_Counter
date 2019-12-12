@@ -10,10 +10,12 @@
 // SETUP
 #define SIGNAL_START_EDGE RISING    // start == rising for positive signals counting
 #define SIGNAL_END_EDGE FALLING     // swap this two values in order to count negative signals
-#define T1_PRESCALER 5      // 5 == b101 for 1024 prescaler
-#define T1_OCR1AH 86        // 86 * (1 / 16MHz / 1024) = 5504 mks
-#define T2_PRESCALER 7      // 7 == b111
-#define T2_OCR2A 86         // 86 * (1 / 16MHz / 1024) = 5504 mks
+
+#define T1_PRESCALER 5      // 5 == b101 stands for 1024 prescaler
+#define T1_OCR1A 100         // Timer1 Compare A value [16bit] = 86 * (1 / 16MHz / 1024) = 5504 mks period
+
+#define T2_PRESCALER 7      // 7 == b111 stands for 1024 prescaler
+#define T2_OCR2A 100         // Timer2 Compare A value [8bit] = 86 * (1 / 16MHz / 1024) = 5504 mks period
 
 #include "Arduino.h"
 
@@ -46,12 +48,13 @@ class NeutronCounter
     // uint32_t timerOVF;          // timer overflow counter
 
   private:
-    uint16_t pulseCounter;      // registred pulse number max=65535
+    volatile uint16_t pulseCounter;      // registred pulse number max=65535
 };
 
 
-void nSignalHandler0();  // External interrupt INT0 handler
-void nSignalHandler1();  // External interrupt INT1 handler
+void nSignalHandler0();   // External interrupt INT0 handler
+void nSignalHandler1();   // External interrupt INT1 handler
+void printNeutronStats();        // debug
 
 void reAttachInterrupt(uint8_t interruptNum, int mode);  // attach interrupt without any changes to interrupt handling function
 
