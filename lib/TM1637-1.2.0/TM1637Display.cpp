@@ -179,8 +179,8 @@ void TM1637Display::showNumberBaseEx(int8_t base, uint16_t num, uint8_t dots, bo
 void TM1637Display::bitDelay()
 {
 	delayMicroseconds(m_bitDelay);
-  unsigned long start = micros();
-  while (micros() - start < m_bitDelay) {}
+  // unsigned long start = micros();
+  // while (micros() - start < m_bitDelay) {}
 }
 
 void TM1637Display::start()
